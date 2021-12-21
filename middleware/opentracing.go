@@ -192,7 +192,7 @@ func (t *TraceDB) Conn(ctx context.Context) (sql.Conn, error) {
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return conn, err
+	return &TraceConn{conn}, err
 }
 
 type TraceStmt struct {
@@ -346,4 +346,64 @@ func (t *TraceTx) QueryRow(query string, args ...interface{}) *stdSql.Row {
 	defer span.Finish()
 	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
 	return t.Tx.QueryRow(query, args...)
+}
+
+type TraceConn struct {
+	sql.Conn
+}
+
+func (t *TraceConn) PingContext(ctx context.Context) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "PingContext")
+	defer span.Finish()
+	err := t.Conn.PingContext(ctx)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return err
+}
+func (t *TraceConn) ExecContext(ctx context.Context, query string, args ...interface{}) (stdSql.Result, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "ExecContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	result, err := t.Conn.ExecContext(ctx, query, args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return result, err
+}
+func (t *TraceConn) QueryContext(ctx context.Context, query string, args ...interface{}) (*stdSql.Rows, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "QueryContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	rows, err := t.Conn.QueryContext(ctx, query, args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return rows, err
+}
+func (t *TraceConn) QueryRowContext(ctx context.Context, query string, args ...interface{}) *stdSql.Row {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "QueryRowContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	return t.Conn.QueryRowContext(ctx, query, args...)
+}
+func (t *TraceConn) PrepareContext(ctx context.Context, query string) (sql.Stmt, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "PrepareContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query))
+	stmt, err := t.Conn.PrepareContext(ctx, query)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return &TraceStmt{stmt}, err
+}
+func (t *TraceConn) BeginTx(ctx context.Context, opts *stdSql.TxOptions) (sql.Tx, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "BeginTx")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.Object("opts", opts))
+	tx, err := t.Conn.BeginTx(ctx, opts)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return &TraceTx{tx}, err
 }
