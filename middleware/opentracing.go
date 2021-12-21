@@ -86,7 +86,7 @@ func (t *TraceDB) PrepareContext(ctx context.Context, query string) (sql.Stmt, e
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return &TraceStmt{stmt}, err
+	return &TraceStmt{stmt, query}, err
 }
 
 func (t *TraceDB) Prepare(query string) (sql.Stmt, error) {
@@ -97,7 +97,7 @@ func (t *TraceDB) Prepare(query string) (sql.Stmt, error) {
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return &TraceStmt{stmt}, err
+	return &TraceStmt{stmt, query}, err
 }
 
 func (t *TraceDB) ExecContext(ctx context.Context, query string, args ...interface{}) (stdSql.Result, error) {
@@ -197,12 +197,13 @@ func (t *TraceDB) Conn(ctx context.Context) (sql.Conn, error) {
 
 type TraceStmt struct {
 	sql.Stmt
+	query string
 }
 
 func (s *TraceStmt) ExecContext(ctx context.Context, args ...interface{}) (stdSql.Result, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "ExecContext")
 	defer span.Finish()
-	span.LogFields(log.Event("debug"), log.Object("args", args))
+	span.LogFields(log.Event("debug"), log.String("query", s.query), log.Object("args", args))
 	result, err := s.Stmt.ExecContext(ctx, args...)
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
@@ -212,7 +213,7 @@ func (s *TraceStmt) ExecContext(ctx context.Context, args ...interface{}) (stdSq
 func (s *TraceStmt) Exec(args ...interface{}) (stdSql.Result, error) {
 	span := opentracing.StartSpan("Exec")
 	defer span.Finish()
-	span.LogFields(log.Event("debug"), log.Object("args", args))
+	span.LogFields(log.Event("debug"), log.String("query", s.query), log.Object("args", args))
 	result, err := s.Stmt.Exec(args...)
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
@@ -222,7 +223,7 @@ func (s *TraceStmt) Exec(args ...interface{}) (stdSql.Result, error) {
 func (s *TraceStmt) QueryContext(ctx context.Context, args ...interface{}) (*stdSql.Rows, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "QueryContext")
 	defer span.Finish()
-	span.LogFields(log.Event("debug"), log.Object("args", args))
+	span.LogFields(log.Event("debug"), log.String("query", s.query), log.Object("args", args))
 	result, err := s.Stmt.QueryContext(ctx, args...)
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
@@ -232,7 +233,7 @@ func (s *TraceStmt) QueryContext(ctx context.Context, args ...interface{}) (*std
 func (s *TraceStmt) Query(args ...interface{}) (*stdSql.Rows, error) {
 	span := opentracing.StartSpan("Query")
 	defer span.Finish()
-	span.LogFields(log.Event("debug"), log.Object("args", args))
+	span.LogFields(log.Event("debug"), log.String("query", s.query), log.Object("args", args))
 	result, err := s.Stmt.Query(args...)
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
@@ -242,13 +243,13 @@ func (s *TraceStmt) Query(args ...interface{}) (*stdSql.Rows, error) {
 func (s *TraceStmt) QueryRowContext(ctx context.Context, args ...interface{}) *stdSql.Row {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "QueryRowContext")
 	defer span.Finish()
-	span.LogFields(log.Event("debug"), log.Object("args", args))
+	span.LogFields(log.Event("debug"), log.String("query", s.query), log.Object("args", args))
 	return s.Stmt.QueryRowContext(ctx, args...)
 }
 func (s *TraceStmt) QueryRow(args ...interface{}) *stdSql.Row {
 	span := opentracing.StartSpan("QueryRow")
 	defer span.Finish()
-	span.LogFields(log.Event("debug"), log.Object("args", args))
+	span.LogFields(log.Event("debug"), log.String("query", s.query), log.Object("args", args))
 	return s.Stmt.QueryRow(args...)
 }
 
@@ -264,7 +265,7 @@ func (t *TraceTx) PrepareContext(ctx context.Context, query string) (sql.Stmt, e
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return &TraceStmt{stmt}, err
+	return &TraceStmt{stmt, query}, err
 }
 
 func (t *TraceTx) Prepare(query string) (sql.Stmt, error) {
@@ -275,19 +276,19 @@ func (t *TraceTx) Prepare(query string) (sql.Stmt, error) {
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return &TraceStmt{stmt}, err
+	return &TraceStmt{stmt, query}, err
 }
 
 func (t *TraceTx) StmtContext(ctx context.Context, stmt sql.Stmt) sql.Stmt {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "StmtContext")
 	defer span.Finish()
-	return &TraceStmt{t.Tx.StmtContext(ctx, stmt)}
+	return &TraceStmt{t.Tx.StmtContext(ctx, stmt), ""}
 }
 
 func (t *TraceTx) Stmt(stmt sql.Stmt) sql.Stmt {
 	span := opentracing.StartSpan("Stmt")
 	defer span.Finish()
-	return &TraceStmt{t.Tx.Stmt(stmt)}
+	return &TraceStmt{t.Tx.Stmt(stmt), ""}
 }
 
 func (t *TraceTx) ExecContext(ctx context.Context, query string, args ...interface{}) (stdSql.Result, error) {
@@ -395,7 +396,7 @@ func (t *TraceConn) PrepareContext(ctx context.Context, query string) (sql.Stmt,
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return &TraceStmt{stmt}, err
+	return &TraceStmt{stmt, query}, err
 }
 func (t *TraceConn) BeginTx(ctx context.Context, opts *stdSql.TxOptions) (sql.Tx, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "BeginTx")
