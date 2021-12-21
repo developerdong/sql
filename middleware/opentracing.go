@@ -78,7 +78,7 @@ func (t *Tracer) Stats() stdSql.DBStats {
 	return t.DB.Stats()
 }
 
-func (t *Tracer) PrepareContext(ctx context.Context, query string) (*stdSql.Stmt, error) {
+func (t *Tracer) PrepareContext(ctx context.Context, query string) (sql.Stmt, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "PrepareContext")
 	defer span.Finish()
 	span.LogFields(log.Event("debug"), log.String("query", query))
@@ -89,7 +89,7 @@ func (t *Tracer) PrepareContext(ctx context.Context, query string) (*stdSql.Stmt
 	return stmt, err
 }
 
-func (t *Tracer) Prepare(query string) (*stdSql.Stmt, error) {
+func (t *Tracer) Prepare(query string) (sql.Stmt, error) {
 	span := opentracing.StartSpan("Prepare")
 	defer span.Finish()
 	span.LogFields(log.Event("debug"), log.String("query", query))
@@ -158,7 +158,7 @@ func (t *Tracer) QueryRow(query string, args ...interface{}) *stdSql.Row {
 	return t.DB.QueryRow(query, args...)
 }
 
-func (t *Tracer) BeginTx(ctx context.Context, opts *stdSql.TxOptions) (*stdSql.Tx, error) {
+func (t *Tracer) BeginTx(ctx context.Context, opts *stdSql.TxOptions) (sql.Tx, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "BeginTx")
 	defer span.Finish()
 	span.LogFields(log.Event("debug"), log.Object("opts", opts))
@@ -169,7 +169,7 @@ func (t *Tracer) BeginTx(ctx context.Context, opts *stdSql.TxOptions) (*stdSql.T
 	return tx, err
 }
 
-func (t *Tracer) Begin() (*stdSql.Tx, error) {
+func (t *Tracer) Begin() (sql.Tx, error) {
 	span := opentracing.StartSpan("Begin")
 	defer span.Finish()
 	tx, err := t.DB.Begin()
@@ -185,7 +185,7 @@ func (t *Tracer) Driver() driver.Driver {
 	return t.DB.Driver()
 }
 
-func (t *Tracer) Conn(ctx context.Context) (*stdSql.Conn, error) {
+func (t *Tracer) Conn(ctx context.Context) (sql.Conn, error) {
 	span, ctx := opentracing.StartSpanFromContext(ctx, "Conn")
 	defer span.Finish()
 	conn, err := t.DB.Conn(ctx)
