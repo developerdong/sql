@@ -194,3 +194,60 @@ func (t *Tracer) Conn(ctx context.Context) (sql.Conn, error) {
 	}
 	return conn, err
 }
+
+type TraceStmt struct {
+	sql.Stmt
+}
+
+func (s *TraceStmt) ExecContext(ctx context.Context, args ...interface{}) (stdSql.Result, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "ExecContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.Object("args", args))
+	result, err := s.Stmt.ExecContext(ctx, args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return result, err
+}
+func (s *TraceStmt) Exec(args ...interface{}) (stdSql.Result, error) {
+	span := opentracing.StartSpan("Exec")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.Object("args", args))
+	result, err := s.Stmt.Exec(args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return result, err
+}
+func (s *TraceStmt) QueryContext(ctx context.Context, args ...interface{}) (*stdSql.Rows, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "QueryContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.Object("args", args))
+	result, err := s.Stmt.QueryContext(ctx, args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return result, err
+}
+func (s *TraceStmt) Query(args ...interface{}) (*stdSql.Rows, error) {
+	span := opentracing.StartSpan("Query")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.Object("args", args))
+	result, err := s.Stmt.Query(args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return result, err
+}
+func (s *TraceStmt) QueryRowContext(ctx context.Context, args ...interface{}) *stdSql.Row {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "QueryRowContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.Object("args", args))
+	return s.Stmt.QueryRowContext(ctx, args...)
+}
+func (s *TraceStmt) QueryRow(args ...interface{}) *stdSql.Row {
+	span := opentracing.StartSpan("QueryRow")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.Object("args", args))
+	return s.Stmt.QueryRow(args...)
+}
