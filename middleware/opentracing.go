@@ -166,7 +166,7 @@ func (t *TraceDB) BeginTx(ctx context.Context, opts *stdSql.TxOptions) (sql.Tx, 
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return tx, err
+	return &TraceTx{tx}, err
 }
 
 func (t *TraceDB) Begin() (sql.Tx, error) {
@@ -176,7 +176,7 @@ func (t *TraceDB) Begin() (sql.Tx, error) {
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return tx, err
+	return &TraceTx{tx}, err
 }
 
 func (t *TraceDB) Driver() driver.Driver {
@@ -250,4 +250,100 @@ func (s *TraceStmt) QueryRow(args ...interface{}) *stdSql.Row {
 	defer span.Finish()
 	span.LogFields(log.Event("debug"), log.Object("args", args))
 	return s.Stmt.QueryRow(args...)
+}
+
+type TraceTx struct {
+	sql.Tx
+}
+
+func (t *TraceTx) PrepareContext(ctx context.Context, query string) (sql.Stmt, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "PrepareContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query))
+	stmt, err := t.Tx.PrepareContext(ctx, query)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return &TraceStmt{stmt}, err
+}
+
+func (t *TraceTx) Prepare(query string) (sql.Stmt, error) {
+	span := opentracing.StartSpan("Prepare")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query))
+	stmt, err := t.Tx.Prepare(query)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return &TraceStmt{stmt}, err
+}
+
+func (t *TraceTx) StmtContext(ctx context.Context, stmt sql.Stmt) sql.Stmt {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "StmtContext")
+	defer span.Finish()
+	return &TraceStmt{t.Tx.StmtContext(ctx, stmt)}
+}
+
+func (t *TraceTx) Stmt(stmt sql.Stmt) sql.Stmt {
+	span := opentracing.StartSpan("Stmt")
+	defer span.Finish()
+	return &TraceStmt{t.Tx.Stmt(stmt)}
+}
+
+func (t *TraceTx) ExecContext(ctx context.Context, query string, args ...interface{}) (stdSql.Result, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "ExecContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	result, err := t.Tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return result, err
+}
+
+func (t *TraceTx) Exec(query string, args ...interface{}) (stdSql.Result, error) {
+	span := opentracing.StartSpan("Exec")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	result, err := t.Tx.Exec(query, args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return result, err
+}
+
+func (t *TraceTx) QueryContext(ctx context.Context, query string, args ...interface{}) (*stdSql.Rows, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "QueryContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	rows, err := t.Tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return rows, err
+}
+
+func (t *TraceTx) Query(query string, args ...interface{}) (*stdSql.Rows, error) {
+	span := opentracing.StartSpan("Query")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	rows, err := t.Tx.Query(query, args...)
+	if err != nil {
+		span.LogFields(log.Event("error"), log.Error(err))
+	}
+	return rows, err
+}
+
+func (t *TraceTx) QueryRowContext(ctx context.Context, query string, args ...interface{}) *stdSql.Row {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "QueryRowContext")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	return t.Tx.QueryRowContext(ctx, query, args...)
+}
+
+func (t *TraceTx) QueryRow(query string, args ...interface{}) *stdSql.Row {
+	span := opentracing.StartSpan("QueryRow")
+	defer span.Finish()
+	span.LogFields(log.Event("debug"), log.String("query", query), log.Object("args", args))
+	return t.Tx.QueryRow(query, args...)
 }
