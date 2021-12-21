@@ -86,7 +86,7 @@ func (t *Tracer) PrepareContext(ctx context.Context, query string) (sql.Stmt, er
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return stmt, err
+	return &TraceStmt{stmt}, err
 }
 
 func (t *Tracer) Prepare(query string) (sql.Stmt, error) {
@@ -97,7 +97,7 @@ func (t *Tracer) Prepare(query string) (sql.Stmt, error) {
 	if err != nil {
 		span.LogFields(log.Event("error"), log.Error(err))
 	}
-	return stmt, err
+	return &TraceStmt{stmt}, err
 }
 
 func (t *Tracer) ExecContext(ctx context.Context, query string, args ...interface{}) (stdSql.Result, error) {
