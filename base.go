@@ -5,6 +5,13 @@ import (
 	"database/sql"
 )
 
+var (
+	_ DB   = (*BaseDB)(nil)
+	_ Stmt = (*BaseStmt)(nil)
+	_ Tx   = (*BaseTx)(nil)
+	_ Conn = (*BaseConn)(nil)
+)
+
 // BaseDB is the most inner middleware, which implements the DB interface. Other
 // middlewares can wrap each other casually, but this one is the base.
 type BaseDB struct {

@@ -8,6 +8,10 @@ import (
 	"sync"
 )
 
+var (
+	_ sql.DB = (*CacheDB)(nil)
+)
+
 type CacheDB struct {
 	sync.RWMutex
 	sql.DB

@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+var (
+	_ sql.DB   = (*TraceDB)(nil)
+	_ sql.Stmt = (*TraceStmt)(nil)
+	_ sql.Tx   = (*TraceTx)(nil)
+	_ sql.Conn = (*TraceConn)(nil)
+)
+
 type TraceDB struct {
 	sql.DB
 }
