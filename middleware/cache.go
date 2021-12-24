@@ -13,9 +13,9 @@ var (
 )
 
 type CacheDB struct {
-	sync.RWMutex
 	sql.DB
-	Stmts map[string]sql.Stmt
+	mu    sync.RWMutex
+	stmts map[string]sql.Stmt
 }
 
 func (c *CacheDB) normalize(query string) string {
@@ -27,30 +27,40 @@ func (c *CacheDB) normalize(query string) string {
 }
 
 func (c *CacheDB) getStmt(query string) (stmt sql.Stmt, err error) {
+	if c.stmts == nil {
+		c.mu.Lock()
+		if c.stmts == nil {
+			c.stmts = make(map[string]sql.Stmt)
+		}
+		c.mu.Unlock()
+	}
 	query = c.normalize(query)
-	c.RLock()
-	stmt = c.Stmts[query]
-	c.RUnlock()
+	c.mu.RLock()
+	stmt = c.stmts[query]
+	c.mu.RUnlock()
 	if stmt == nil {
-		c.Lock()
-		stmt = c.Stmts[query]
+		c.mu.Lock()
+		stmt = c.stmts[query]
 		if stmt == nil {
 			stmt, err = c.Prepare(query)
 			if err == nil {
-				c.Stmts[query] = stmt
+				c.stmts[query] = stmt
 			}
 		}
-		c.Unlock()
+		c.mu.Unlock()
 	}
 	return
 }
 
 func (c *CacheDB) rmStmt(query string) {
+	if c.stmts == nil {
+		return
+	}
 	query = c.normalize(query)
-	c.Lock()
-	stmt := c.Stmts[query]
-	delete(c.Stmts, query)
-	c.Unlock()
+	c.mu.Lock()
+	stmt := c.stmts[query]
+	delete(c.stmts, query)
+	c.mu.Unlock()
 	if stmt != nil {
 		_ = stmt.Close()
 	}
